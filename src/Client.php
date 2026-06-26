@@ -5,10 +5,12 @@ namespace RabbitMq\ManagementApi;
 use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\Plugin\HeaderDefaultsPlugin;
 use Http\Client\Common\PluginClient;
-use Http\Client\HttpClient;
-use Http\Discovery\HttpClientDiscovery;
-use Http\Discovery\MessageFactoryDiscovery;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Http\Discovery\Psr18ClientDiscovery;
 use Http\Message\Authentication\BasicAuth;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 
 /**
  * ManagementApi
@@ -18,28 +20,48 @@ use Http\Message\Authentication\BasicAuth;
 class Client
 {
     /**
-     * @var HttpClient
+     * @var ClientInterface
      */
     protected $client;
-    protected $messageFactory;
+
+    /**
+     * @var RequestFactoryInterface
+     */
+    protected $requestFactory;
+
+    /**
+     * @var StreamFactoryInterface
+     */
+    protected $streamFactory;
+
+    /**
+     * @var string
+     */
     protected $baseUrl;
 
     /**
-     * @param HttpClient $client
-     * @param string $baseUrl
-     * @param string $username
-     * @param string $password
+     * @param ClientInterface|null $client   A PSR-18 HTTP client. Auto-discovered when null.
+     * @param string               $baseUrl
+     * @param string               $username
+     * @param string               $password
      */
-    public function __construct(HttpClient $client = null, $baseUrl = 'http://localhost:15672', $username = 'guest', $password = 'guest')
-    {
+    public function __construct(
+        ClientInterface $client = null,
+        string $baseUrl = 'http://localhost:15672',
+        string $username = 'guest',
+        string $password = 'guest'
+    ) {
         $this->baseUrl = $baseUrl;
-        $this->messageFactory = MessageFactoryDiscovery::find();
+        $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
+        $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
 
         $this->client = new PluginClient(
-            $client ?: HttpClientDiscovery::find(), [
-            new AuthenticationPlugin(new BasicAuth($username, $password)),
-            new HeaderDefaultsPlugin(['Content-Type' => 'application/json'])
-        ]);
+            $client ?: Psr18ClientDiscovery::find(),
+            [
+                new AuthenticationPlugin(new BasicAuth($username, $password)),
+                new HeaderDefaultsPlugin(['Content-Type' => 'application/json']),
+            ]
+        );
     }
 
     /**
@@ -194,19 +216,24 @@ class Client
     }
 
     /**
-     * @param string $endpoint Resource URI.
-     * @param string $method
-     * @param array $headers  HTTP headers
-     * @param string|resource|array $body Entity body of request (POST/PUT) or response (GET)
+     * @param string                     $endpoint Resource URI.
+     * @param string                     $method
+     * @param array                      $headers  HTTP headers
+     * @param string|resource|array|null $body     Entity body of request (POST/PUT)
      * @return array
      */
-    public function send($endpoint, $method = 'GET', array $headers = [], $body = null)
+    public function send(string $endpoint, string $method = 'GET', array $headers = [], $body = null)
     {
-        if (null !== $body) {
-            $body = json_encode($body);
+        $request = $this->requestFactory->createRequest($method, $this->baseUrl . $endpoint);
+
+        foreach ($headers as $name => $value) {
+            $request = $request->withHeader($name, $value);
         }
 
-        $request = $this->messageFactory->createRequest($method, $this->baseUrl . $endpoint, $headers, $body);
+        if (null !== $body) {
+            $request = $request->withBody($this->streamFactory->createStream(json_encode($body)));
+        }
+
         $response = $this->client->sendRequest($request);
 
         return json_decode($response->getBody()->getContents(), true);

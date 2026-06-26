@@ -1,8 +1,8 @@
 {
-    "name": "richardfullmer/rabbitmq-management-api",
+    "name": "fightmaster/php-rabbitmq-management-api",
     "type": "library",
-    "description": "An object oriented wrapper for the RabbitMQ Management HTTP Api",
-    "homepage": "https://github.com/richardfullmer/php-rabbitmq-management-api",
+    "description": "An object oriented wrapper for the RabbitMQ Management HTTP API",
+    "homepage": "https://github.com/fightmaster/php-rabbitmq-management-api",
     "keywords": ["rest", "message queue", "rabbitmq"],
     "license": "MIT",
     "authors": [
@@ -13,22 +13,39 @@
         }
     ],
     "require": {
-        "php": ">=5.4",
-        "psr/http-message": "^1.0",
-        "php-http/client-implementation": "^1.0",
-        "php-http/client-common": "^1.0",
-        "php-http/httplug": "^1.0",
-        "php-http/message-factory": "^1.0",
-        "php-http/discovery": "^1.0"
+        "php": "^7.2 || ^8.0",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.0 || ^2.0",
+        "php-http/client-common": "^2.0",
+        "php-http/discovery": "^1.14",
+        "php-http/httplug": "^2.0",
+        "php-http/message": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.5 || ^9.5",
+        "nyholm/psr7": "^1.4",
+        "php-http/mock-client": "^1.5"
     },
     "autoload": {
         "psr-4": {
             "RabbitMq\\ManagementApi\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "RabbitMq\\ManagementApi\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.x-dev"
+            "dev-master": "3.x-dev"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
         }
     }
 }
